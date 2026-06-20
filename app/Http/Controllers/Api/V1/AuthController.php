@@ -63,6 +63,7 @@ class AuthController extends Controller
         return [
             'orders:view',
             'orders:create',
+            'reports:view',
         ];
     }
 }

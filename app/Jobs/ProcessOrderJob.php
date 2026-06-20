@@ -9,6 +9,7 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Cache;
 use Throwable;
+use App\Services\ReportService;
 
 class ProcessOrderJob implements ShouldQueue
 {
@@ -24,11 +25,14 @@ class ProcessOrderJob implements ShouldQueue
         $this->onQueue('orders');
     }
 
-    public function handle(AuditLogService $auditLogService): void
+    public function handle(
+        AuditLogService $auditLogService,
+        ReportService $reportService
+    ): void
     {
         $lock = Cache::lock("order-processing:{$this->orderId}", 60);
 
-        $lock->block(10, function () use ($auditLogService) {
+        $lock->block(10, function () use ($auditLogService, $reportService) {
             $order = Order::query()
                 ->with('user')
                 ->findOrFail($this->orderId);
@@ -64,6 +68,9 @@ class ProcessOrderJob implements ShouldQueue
                     'processed_at',
                 ]),
             );
+
+            $reportService->clearOrderReportCache($order->user);
+            $reportService->clearOrderReportCache();
 
             $order->user->notify(new OrderProcessedNotification($order));
         });

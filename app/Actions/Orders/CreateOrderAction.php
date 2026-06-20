@@ -10,11 +10,13 @@ use App\Services\AuditLogService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
+use App\Services\ReportService;
 
 class CreateOrderAction
 {
     public function __construct(
-        private readonly AuditLogService $auditLogService
+        private readonly AuditLogService $auditLogService,
+        private readonly ReportService $reportService
     ) {
     }
 
@@ -102,6 +104,9 @@ class CreateOrderAction
                     })->values()->toArray(),
                 ],
             );
+
+            $this->reportService->clearOrderReportCache($user);
+            $this->reportService->clearOrderReportCache();
 
             event(new OrderCreated($order));
 
