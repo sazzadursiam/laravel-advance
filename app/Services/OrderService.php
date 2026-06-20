@@ -38,12 +38,8 @@ class OrderService
         return $this->createOrderAction->execute($user, $data);
     }
 
-    public function findForUser(User $user, Order $order): Order
+    public function find(Order $order): Order
     {
-        if (! $user->isAdmin() && $order->user_id !== $user->id) {
-            abort(403, 'You are not allowed to access this order.');
-        }
-
         return $order->load(['user', 'items.product']);
     }
 }

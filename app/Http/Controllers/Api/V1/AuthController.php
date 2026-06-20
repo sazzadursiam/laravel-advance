@@ -63,8 +63,6 @@ class AuthController extends Controller
         return [
             'orders:view',
             'orders:create',
-            'orders:update',
-            'orders:delete',
         ];
     }
 }

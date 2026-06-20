@@ -20,6 +20,8 @@ class OrderController extends Controller
 
     public function index(Request $request): AnonymousResourceCollection
     {
+        $this->authorize('viewAny', Order::class);
+
         $orders = $this->orderService->paginateForUser(
             $request->user(),
             $request->only(['status', 'per_page'])
@@ -30,6 +32,8 @@ class OrderController extends Controller
 
     public function store(StoreOrderRequest $request): JsonResponse
     {
+        $this->authorize('create', Order::class);
+
         $order = $this->orderService->create(
             $request->user(),
             $request->validated()
@@ -43,7 +47,9 @@ class OrderController extends Controller
 
     public function show(Request $request, Order $order): JsonResponse
     {
-        $order = $this->orderService->findForUser($request->user(), $order);
+        $this->authorize('view', $order);
+
+        $order = $this->orderService->find($order);
 
         return response()->json([
             'data' => new OrderResource($order),
@@ -52,6 +58,8 @@ class OrderController extends Controller
 
     public function update(Request $request, Order $order): JsonResponse
     {
+        $this->authorize('update', $order);
+
         return response()->json([
             'message' => 'Order update will be implemented later.',
         ]);
@@ -59,6 +67,8 @@ class OrderController extends Controller
 
     public function destroy(Request $request, Order $order): JsonResponse
     {
+        $this->authorize('delete', $order);
+
         return response()->json([
             'message' => 'Order delete will be implemented later.',
         ]);
