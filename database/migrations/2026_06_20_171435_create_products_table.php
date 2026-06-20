@@ -13,7 +13,15 @@ return new class extends Migration
     {
         Schema::create('products', function (Blueprint $table) {
             $table->id();
+            $table->string('name');
+            $table->string('sku')->unique();
+            $table->unsignedBigInteger('price'); // store as paisa/cents
+            $table->unsignedInteger('stock')->default(0);
+            $table->boolean('is_active')->default(true);
+
             $table->timestamps();
+
+            $table->index('is_active');
         });
     }
 

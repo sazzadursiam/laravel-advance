@@ -13,7 +13,27 @@ return new class extends Migration
     {
         Schema::create('idempotency_keys', function (Blueprint $table) {
             $table->id();
+
+            $table->foreignId('user_id')
+                ->nullable()
+                ->constrained()
+                ->nullOnDelete();
+
+            $table->string('key')->unique();
+            $table->string('method');
+            $table->string('path');
+            $table->string('request_hash');
+
+            $table->json('response_body')->nullable();
+            $table->unsignedSmallInteger('status_code')->nullable();
+
+            $table->timestamp('locked_until')->nullable();
+            $table->timestamp('expires_at')->nullable();
+
             $table->timestamps();
+
+            $table->index(['user_id', 'key']);
+            $table->index('expires_at');
         });
     }
 
