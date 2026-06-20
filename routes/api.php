@@ -11,9 +11,15 @@ Route::prefix('v1')->group(function () {
     Route::middleware(['auth:sanctum'])->group(function () {
         Route::post('/logout', [AuthController::class, 'logout']);
 
-        Route::apiResource('orders', OrderController::class);
+        Route::get('/orders', [OrderController::class, 'index']);
+        Route::post('/orders', [OrderController::class, 'store'])
+            ->middleware('idempotency');
+        Route::get('/orders/{order}', [OrderController::class, 'show']);
+        Route::put('/orders/{order}', [OrderController::class, 'update'])
+            ->middleware('idempotency');
+        Route::delete('/orders/{order}', [OrderController::class, 'destroy'])
+            ->middleware('idempotency');
 
-        // We will create this later
         Route::post('/reports/orders', [ReportController::class, 'generateOrderReport']);
     });
 });
