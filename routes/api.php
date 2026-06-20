@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\V1\AuditLogController;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\OrderController;
 use App\Http\Controllers\Api\V1\ReportController;
@@ -19,6 +20,8 @@ Route::prefix('v1')->group(function () {
             ->middleware('idempotency');
         Route::delete('/orders/{order}', [OrderController::class, 'destroy'])
             ->middleware('idempotency');
+
+        Route::get('/audit-logs', [AuditLogController::class, 'index']);
 
         Route::post('/reports/orders', [ReportController::class, 'generateOrderReport']);
     });

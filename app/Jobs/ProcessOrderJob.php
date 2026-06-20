@@ -4,6 +4,7 @@ namespace App\Jobs;
 
 use App\Models\Order;
 use App\Notifications\OrderProcessedNotification;
+use App\Services\AuditLogService;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Cache;
@@ -23,11 +24,11 @@ class ProcessOrderJob implements ShouldQueue
         $this->onQueue('orders');
     }
 
-    public function handle(): void
+    public function handle(AuditLogService $auditLogService): void
     {
         $lock = Cache::lock("order-processing:{$this->orderId}", 60);
 
-        $lock->block(10, function () {
+        $lock->block(10, function () use ($auditLogService) {
             $order = Order::query()
                 ->with('user')
                 ->findOrFail($this->orderId);
@@ -36,17 +37,33 @@ class ProcessOrderJob implements ShouldQueue
                 return;
             }
 
+            $oldValues = $order->only([
+                'status',
+                'processed_at',
+            ]);
+
             $order->update([
                 'status' => Order::STATUS_PROCESSING,
             ]);
 
-            // Simulate external payment/shipping/inventory sync.
             sleep(2);
 
             $order->update([
                 'status' => Order::STATUS_COMPLETED,
                 'processed_at' => now(),
             ]);
+
+            $order->refresh();
+
+            $auditLogService->log(
+                action: 'order.processed',
+                model: $order,
+                oldValues: $oldValues,
+                newValues: $order->only([
+                    'status',
+                    'processed_at',
+                ]),
+            );
 
             $order->user->notify(new OrderProcessedNotification($order));
         });

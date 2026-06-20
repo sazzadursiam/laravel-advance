@@ -6,12 +6,18 @@ use App\Events\OrderCreated;
 use App\Models\Order;
 use App\Models\Product;
 use App\Models\User;
+use App\Services\AuditLogService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 class CreateOrderAction
 {
+    public function __construct(
+        private readonly AuditLogService $auditLogService
+    ) {
+    }
+
     public function execute(User $user, array $data): Order
     {
         return DB::transaction(function () use ($user, $data) {
@@ -71,6 +77,31 @@ class CreateOrderAction
             }
 
             $order->load(['user', 'items.product']);
+
+            $this->auditLogService->log(
+                action: 'order.created',
+                model: $order,
+                oldValues: null,
+                newValues: [
+                    'order' => $order->only([
+                        'id',
+                        'user_id',
+                        'order_number',
+                        'status',
+                        'total_amount',
+                        'notes',
+                    ]),
+                    'items' => $order->items->map(function ($item) {
+                        return $item->only([
+                            'id',
+                            'product_id',
+                            'quantity',
+                            'unit_price',
+                            'subtotal',
+                        ]);
+                    })->values()->toArray(),
+                ],
+            );
 
             event(new OrderCreated($order));
 
