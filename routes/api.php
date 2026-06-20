@@ -28,8 +28,12 @@ Route::prefix('v1')->group(function () {
 
         Route::get('/audit-logs', [AuditLogController::class, 'index']);
 
-        Route::get('/reports/orders/summary', [ReportController::class, 'orderSummary']);
-        Route::post('/reports/orders', [ReportController::class, 'generateOrderReport']);
 
+        Route::get('/reports/orders/summary', [ReportController::class, 'orderSummary']);
+
+        Route::post('/reports/orders', [ReportController::class, 'generateOrderReport'])
+            ->middleware('throttle:order-create');
+
+        Route::get('/reports/orders/batches/{batchId}', [ReportController::class, 'showBatch']);
     });
 });

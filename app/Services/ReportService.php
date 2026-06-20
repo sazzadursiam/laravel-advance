@@ -2,9 +2,16 @@
 
 namespace App\Services;
 
+use App\Jobs\GenerateOrderReportJob;
+use App\Models\GeneratedReport;
 use App\Models\Order;
 use App\Models\User;
+use App\Notifications\OrderReportBatchCompletedNotification;
+use Carbon\Carbon;
+use Illuminate\Bus\Batch;
+use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Cache;
+use Throwable;
 
 class ReportService
 {
@@ -101,5 +108,72 @@ class ReportService
         }
 
         return ['orders', 'reports', "user:{$user->id}:reports"];
+    }
+
+    public function dispatchMonthlyOrderReportBatch(User $admin, int $year, array $months = []): Batch
+    {
+        $months = $months ?: range(1, 12);
+
+        $jobs = [];
+        $reportIds = [];
+
+        foreach ($months as $month) {
+            $start = Carbon::create($year, $month, 1)->startOfMonth();
+            $end = $start->copy()->endOfMonth();
+
+            $report = GeneratedReport::query()->create([
+                'user_id' => $admin->id,
+                'type' => GeneratedReport::TYPE_ORDER_MONTHLY,
+                'status' => GeneratedReport::STATUS_PENDING,
+                'period_start' => $start->toDateString(),
+                'period_end' => $end->toDateString(),
+            ]);
+
+            $reportIds[] = $report->id;
+            $jobs[] = new GenerateOrderReportJob($report->id);
+        }
+
+        $batch = Bus::batch($jobs)
+            ->name("Monthly Order Report {$year}")
+            ->onQueue('reports')
+            ->allowFailures()
+            ->then(function (Batch $batch) use ($admin) {
+                $admin->notify(new OrderReportBatchCompletedNotification($batch));
+            })
+            ->catch(function (Batch $batch, Throwable $e) {
+                logger()->error('Order report batch failed.', [
+                    'batch_id' => $batch->id,
+                    'error' => $e->getMessage(),
+                ]);
+            })
+            ->finally(function (Batch $batch) {
+                logger()->info('Order report batch finished.', [
+                    'batch_id' => $batch->id,
+                    'progress' => $batch->progress(),
+                    'failed_jobs' => $batch->failedJobs,
+                ]);
+            })
+            ->dispatch();
+
+        GeneratedReport::query()
+            ->whereIn('id', $reportIds)
+            ->update([
+                'batch_id' => $batch->id,
+            ]);
+
+        return $batch;
+    }
+    private function extractReportId(GenerateOrderReportJob $job): ?int
+    {
+        $reflection = new \ReflectionClass($job);
+
+        if (! $reflection->hasProperty('reportId')) {
+            return null;
+        }
+
+        $property = $reflection->getProperty('reportId');
+        $property->setAccessible(true);
+
+        return $property->getValue($job);
     }
 }
