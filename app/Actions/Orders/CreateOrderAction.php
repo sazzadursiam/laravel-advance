@@ -85,14 +85,14 @@ class CreateOrderAction
                 model: $order,
                 oldValues: null,
                 newValues: [
-                    'order' => $order->only([
-                        'id',
-                        'user_id',
-                        'order_number',
-                        'status',
-                        'total_amount',
-                        'notes',
-                    ]),
+                    'order' => [
+                        'id' => $order->id,
+                        'user_id' => $order->user_id,
+                        'order_number' => $order->order_number,
+                        'status' => $order->status,
+                        'total_amount' => $order->total_amount,
+                        'has_notes' => filled($order->notes),
+                    ],
                     'items' => $order->items->map(function ($item) {
                         return $item->only([
                             'id',

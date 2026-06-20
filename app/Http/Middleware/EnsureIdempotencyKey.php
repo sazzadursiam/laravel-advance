@@ -28,9 +28,9 @@ class EnsureIdempotencyKey
             ], 422);
         }
 
-        if (strlen($key) > 100) {
+        if (! preg_match('/^[a-zA-Z0-9._:-]{10,100}$/', $key)) {
             return response()->json([
-                'message' => 'Idempotency-Key must not be greater than 100 characters.',
+                'message' => 'Idempotency-Key must be 10-100 characters and only contain letters, numbers, dot, underscore, colon, or hyphen.',
             ], 422);
         }
 

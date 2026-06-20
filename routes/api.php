@@ -6,12 +6,16 @@ use App\Http\Controllers\Api\V1\OrderController;
 use App\Http\Controllers\Api\V1\ReportController;
 use Illuminate\Support\Facades\Route;
 
-Route::prefix('v1')->group(function () {
+Route::middleware(['secure.headers'])->prefix('v1')->group(function () {
     Route::post('/login', [AuthController::class, 'login'])
         ->middleware('throttle:login');
 
     Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
         Route::post('/logout', [AuthController::class, 'logout']);
+        Route::post('/logout-all', [AuthController::class, 'logoutAll']);
+        Route::get('/tokens', [AuthController::class, 'tokens']);
+        Route::delete('/tokens/{tokenId}', [AuthController::class, 'revokeToken']);
+
 
         Route::get('/orders', [OrderController::class, 'index']);
 

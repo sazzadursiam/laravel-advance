@@ -8,6 +8,7 @@ use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
+use App\Services\AuditLogService;
 
 class AuthController extends Controller
 {
@@ -54,6 +55,26 @@ class AuthController extends Controller
         ]);
     }
 
+    public function logoutAll(AuditLogService $auditLogService): JsonResponse
+    {
+        $user = request()->user();
+
+        $auditLogService->log(
+            action: 'auth.logout_all',
+            model: $user,
+            oldValues: null,
+            newValues: [
+                'message' => 'All tokens revoked.',
+            ],
+        );
+
+        $user->tokens()->delete();
+
+        return response()->json([
+            'message' => 'Logged out from all devices successfully.',
+        ]);
+    }
+
     private function abilitiesFor(User $user): array
     {
         if ($user->isAdmin()) {
@@ -65,5 +86,52 @@ class AuthController extends Controller
             'orders:create',
             'reports:view',
         ];
+    }
+
+    public function tokens(): JsonResponse
+    {
+        $tokens = request()->user()
+            ->tokens()
+            ->latest()
+            ->get()
+            ->map(function ($token) {
+                return [
+                    'id' => $token->id,
+                    'name' => $token->name,
+                    'abilities' => $token->abilities,
+                    'last_used_at' => $token->last_used_at?->toDateTimeString(),
+                    'created_at' => $token->created_at?->toDateTimeString(),
+                ];
+            });
+
+        return response()->json([
+            'data' => $tokens,
+        ]);
+    }
+
+    public function revokeToken(int $tokenId, AuditLogService $auditLogService): JsonResponse
+    {
+        $user = request()->user();
+
+        $token = $user->tokens()
+            ->where('id', $tokenId)
+            ->firstOrFail();
+
+        $auditLogService->log(
+            action: 'auth.token_revoked',
+            model: $user,
+            oldValues: [
+                'token_id' => $token->id,
+                'token_name' => $token->name,
+                'abilities' => $token->abilities,
+            ],
+            newValues: null,
+        );
+
+        $token->delete();
+
+        return response()->json([
+            'message' => 'Token revoked successfully.',
+        ]);
     }
 }

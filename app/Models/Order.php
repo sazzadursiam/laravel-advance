@@ -25,6 +25,7 @@ class Order extends Model
     protected $casts = [
         'total_amount' => 'integer',
         'processed_at' => 'datetime',
+        'notes' => 'encrypted',
     ];
 
     public function user(): BelongsTo
