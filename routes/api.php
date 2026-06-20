@@ -7,17 +7,22 @@ use App\Http\Controllers\Api\V1\ReportController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function () {
-    Route::post('/login', [AuthController::class, 'login']);
+    Route::post('/login', [AuthController::class, 'login'])
+        ->middleware('throttle:login');
 
-    Route::middleware(['auth:sanctum'])->group(function () {
+    Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
         Route::post('/logout', [AuthController::class, 'logout']);
 
         Route::get('/orders', [OrderController::class, 'index']);
+
         Route::post('/orders', [OrderController::class, 'store'])
-            ->middleware('idempotency');
+            ->middleware(['throttle:order-create', 'idempotency']);
+
         Route::get('/orders/{order}', [OrderController::class, 'show']);
+
         Route::put('/orders/{order}', [OrderController::class, 'update'])
             ->middleware('idempotency');
+
         Route::delete('/orders/{order}', [OrderController::class, 'destroy'])
             ->middleware('idempotency');
 
