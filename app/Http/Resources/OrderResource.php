@@ -28,10 +28,13 @@ class OrderResource extends JsonResource
 
             'items' => $this->whenLoaded('items', function () {
                 return $this->items->map(function ($item) {
+                    $product = $item->relationLoaded('product') ? $item->product : null;
+
                     return [
                         'id' => $item->id,
                         'product_id' => $item->product_id,
-                        'product_name' => $item->product?->name,
+                        'product_name' => $product?->name,
+                        'product_sku' => $product?->sku,
                         'quantity' => $item->quantity,
                         'unit_price' => $item->unit_price,
                         'unit_price_formatted' => number_format($item->unit_price / 100, 2),

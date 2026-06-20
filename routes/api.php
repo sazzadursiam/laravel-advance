@@ -35,5 +35,26 @@ Route::prefix('v1')->group(function () {
             ->middleware('throttle:order-create');
 
         Route::get('/reports/orders/batches/{batchId}', [ReportController::class, 'showBatch']);
+
+        if (app()->isLocal()) {
+            Route::get('/debug/orders-query-benchmark', function () {
+                $start = microtime(true);
+
+                $orders = \App\Models\Order::query()
+                    ->with(['items.product'])
+                    ->latest()
+                    ->limit(100)
+                    ->get();
+
+                return response()->json([
+                    'total_loaded' => $orders->count(),
+                    'time_ms' => round((microtime(true) - $start) * 1000, 2),
+                    'memory_mb' => round(memory_get_peak_usage(true) / 1024 / 1024, 2),
+                ]);
+            });
+        }
+
+
+
     });
 });

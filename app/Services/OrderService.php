@@ -17,7 +17,21 @@ class OrderService
     public function paginateForUser(User $user, array $filters = []): LengthAwarePaginator
     {
         $query = Order::query()
-            ->with(['items.product'])
+            ->select([
+                'id',
+                'user_id',
+                'order_number',
+                'status',
+                'total_amount',
+                'notes',
+                'processed_at',
+                'created_at',
+                'updated_at',
+            ])
+            ->with([
+                'items:id,order_id,product_id,quantity,unit_price,subtotal',
+                'items.product:id,name,sku,price',
+            ])
             ->latest();
 
         if (! $user->isAdmin()) {
